@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Protected Page</title>
+  <style>
+    :root { --bg:#0f1724; --accent:#2dd4bf; --muted:#9aa4b2; }
+    html,body{height:100%;margin:0;font-family:Arial,sans-serif;background:#071025;color:#e6eef6}
+    #lock-screen { height:100vh; display:flex; align-items:center; justify-content:center; }
+    .card { width:350px; background:rgba(255,255,255,0.02); border-radius:12px; padding:25px; border:1px solid rgba(255,255,255,0.05); text-align:center; }
+    input { width:70%; padding:10px; border-radius:8px; border:1px solid #333; background:transparent; color:white; margin-bottom:10px; }
+    button#unlock { background:var(--accent); border:none; color:#022020; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; }
+    #logout-ui { display:none; position:fixed; top:15px; left:15px; z-index:1000; }
+    .logout-btn { background:rgba(255,255,255,0.1); border:1px solid #444; color:#ccc; padding:5px 10px; border-radius:5px; cursor:pointer; }
+    #protected-viewport { display:none; }
+  </style>
+</head>
+<body>
+
+  <div id="logout-ui"><button class="logout-btn" onclick="logout()">Sign Out</button></div>
+
+  <div id="lock-screen">
+    <div class="card">
+        <h1>Locked Page</h1>
+        <input id="pwd" type="password" placeholder="Enter Password" />
+        <br>
+        <button id="unlock">Unlock</button>
+        <div id="error" style="color:#ffb4b4; display:none; margin-top:10px;">Wrong password!</div>
+    </div>
+  </div>
+
+  <div id="protected-viewport"></div>
+
+  <script>
+    // Password is "1234"
+    const HASHED_PASSWORD = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"; 
+
+    // =========================================================
+    // PASTE YOUR ENTIRE HTML CODE BETWEEN THE BACKTICKS BELOW:
+    // =========================================================
+    const MY_CUSTOM_HTML = `
+
+        <h1>Hello! This is my new page.</h1>
+        <p>You can delete these two lines and paste your own code here.</p>
+
+    `;
+    // =========================================================
+
+    const SESSION_DURATION = 30 * 60 * 1000;
+    const viewport = document.getElementById('protected-viewport');
+    const lockScreen = document.getElementById('lock-screen');
+    const logoutUI = document.getElementById('logout-ui');
+    const pwdEl = document.getElementById('pwd');
+
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function showProtected() {
+        lockScreen.style.display = 'none';
+        logoutUI.style.display = 'block';
+        viewport.style.display = 'block';
+        viewport.innerHTML = MY_CUSTOM_HTML;
+        // This part runs any scripts you pasted inside your HTML
+        const scripts = viewport.getElementsByTagName("script");
+        for (let i = 0; i < scripts.length; i++) { eval(scripts[i].innerText); }
+    }
+
+    function logout() { localStorage.removeItem('session_start'); window.location.reload(); }
+
+    async function handleUnlock() {
+        if (await sha256(pwdEl.value) === HASHED_PASSWORD) {
+            localStorage.setItem('session_start', Date.now().toString());
+            showProtected();
+        } else { document.getElementById('error').style.display = 'block'; }
+    }
+
+    function checkSession() {
+        const sessionStart = localStorage.getItem('session_start');
+        if (sessionStart && (Date.now() - parseInt(sessionStart) < SESSION_DURATION)) {
+            showProtected();
+        } else { lockScreen.style.display = 'flex'; }
+    }
+
+    document.getElementById('unlock').addEventListener('click', handleUnlock);
+    pwdEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleUnlock(); });
+    checkSession();
+  </script>
+</body>
+</html>
