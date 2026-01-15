@@ -1,15 +1,70 @@
-<!DOCTYPE html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Protected Page</title>
+  <style>
+    /* 1. LOOKS AND FEEL */
+    :root { --bg:#0f1724; --accent:#2dd4bf; --muted:#9aa4b2; color-scheme: dark; }
+    html,body{height:100%;margin:0;font-family:Arial,sans-serif;background:#071025;color:#e6eef6}
+    
+    /* Login Screen Setup */
+    #lock-screen { height:100vh; display:flex; align-items:center; justify-content:center; }
+    .card { width:350px; background:rgba(255,255,255,0.02); border-radius:12px; padding:25px; border:1px solid rgba(255,255,255,0.05); text-align:center; }
+    input { width:70%; padding:10px; border-radius:8px; border:1px solid #333; background:transparent; color:white; margin-bottom:10px; }
+    button#unlock { background:var(--accent); border:none; color:#022020; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; }
+    .error { color:#ffb4b4; font-size:13px; margin-top:10px; display:none; }
+
+    /* Logout Button Styling */
+    #logout-ui { display:none; position:fixed; top:15px; left:15px; z-index:1000; }
+    .logout-btn { background:rgba(255,255,255,0.1); border:1px solid #444; color:#ccc; padding:5px 10px; border-radius:5px; cursor:pointer; }
+    
+    #protected-viewport { display:none; }
+  </style>
+</head>
+<body>
+
+  <!-- SIGN OUT BUTTON (Stay outside your custom HTML) -->
+  <div id="logout-ui"><button class="logout-btn" onclick="logout()">Sign Out</button></div>
+
+  <!-- THE LOGIN SCREEN -->
+  <div id="lock-screen">
+    <div class="card">
+        <h1>Locked Content</h1>
+        <input id="pwd" type="password" placeholder="Enter Password" />
+        <br>
+        <button id="unlock">Unlock Page</button>
+        <div id="error" class="error">Incorrect password!</div>
+    </div>
+  </div>
+
+  <!-- THE VIEWPORT (Your HTML will appear here) -->
+  <div id="protected-viewport"></div>
+
+  <script>
+    /* =========================================
+       2. CONFIGURATION
+       ========================================= */
+    
+    // PASSWORD HASH (This long code represents "1234")
+    const HASHED_PASSWORD = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4"; 
+
+    // YOUR HTML CODE GOES HERE:
+    // Simply paste your HTML between the two backticks (`) below.
+    const MY_CUSTOM_HTML = `
+        <!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-5937MNQKK5"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-5937MNQKK5"><\/script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag() {dataLayer.push(arguments);}
     gtag('js', new Date());
 
     gtag('config', 'G-5937MNQKK5');
-  </script>
+  <\/script>
   <title>MonkeyGG2</title>
   <meta name="description" content="Cool site for stuff" />
   <meta name="keywords"
@@ -445,12 +500,60 @@
       <!-- <i class="fas fa-chevron-left"></i> Font Awesome fontawesome.com -->
     </button>
   </section>
-  <script src="js/config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-  <script src="js/loading.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/p5@1.8.0/lib/p5.min.js" defer></script>
-  <script src="js/bg.js" defer></script>
-  <script src="js/index.js" defer></script>
+  <script src="js/config.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"><\/script>
+  <script src="js/loading.js" defer><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.8.0/lib/p5.min.js" defer><\/script>
+  <script src="js/bg.js" defer><\/script>
+  <script src="js/index.js" defer><\/script>
 </body>
 
+</html>
+
+    `;
+
+    /* =========================================
+       3. LOGIC (DO NOT EDIT BELOW)
+       ========================================= */
+    const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
+    const viewport = document.getElementById('protected-viewport');
+    const lockScreen = document.getElementById('lock-screen');
+    const logoutUI = document.getElementById('logout-ui');
+    const pwdEl = document.getElementById('pwd');
+    const errEl = document.getElementById('error');
+
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function showProtected() {
+        lockScreen.style.display = 'none';
+        logoutUI.style.display = 'block';
+        viewport.style.display = 'block';
+        viewport.innerHTML = MY_CUSTOM_HTML;
+    }
+
+    function logout() { localStorage.removeItem('session_start'); window.location.reload(); }
+
+    async function handleUnlock() {
+        if (await sha256(pwdEl.value) === HASHED_PASSWORD) {
+            localStorage.setItem('session_start', Date.now().toString());
+            showProtected();
+        } else { errEl.style.display = 'block'; }
+    }
+
+    function checkSession() {
+        const sessionStart = localStorage.getItem('session_start');
+        if (sessionStart && (Date.now() - parseInt(sessionStart) < SESSION_DURATION)) {
+            showProtected();
+        } else { lockScreen.style.display = 'flex'; }
+    }
+
+    document.getElementById('unlock').addEventListener('click', handleUnlock);
+    pwdEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleUnlock(); });
+    checkSession();
+  </script>
+</body>
 </html>
